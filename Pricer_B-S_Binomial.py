@@ -109,17 +109,12 @@ github_url = "https://github.com/adam-hmdc"
 st.markdown(
     f"""
     <div style="position: fixed; top: 15px; left: 15px; z-index: 100; display:flex; gap:12px;">
-
-        <!-- LinkedIn -->
-        <a href="{linkedin_url}" target="_blank" rel="noopener noreferrer">
-            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/linkedin.svg" width="28" height="28" style="filter: invert(23%) sepia(95%) saturate(1831%) hue-rotate(191deg) brightness(90%) contrast(96%);" />
+        <a href="{linkedin_url}" target="_blank">
+            <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="28" height="28">
         </a>
-
-        <!-- GitHub -->
-        <a href="{github_url}" target="_blank" rel="noopener noreferrer">
-            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/github.svg" width="28" height="28" />
+        <a href="{github_url}" target="_blank">
+            <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" width="28" height="28">
         </a>
-
     </div>
     """,
     unsafe_allow_html=True
