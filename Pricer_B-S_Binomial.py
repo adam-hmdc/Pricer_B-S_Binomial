@@ -80,7 +80,7 @@ def bs_rho(S,K,T,r,sigma,option_type='call',q=0):
         return -K*T*np.exp(-r*T)*norm.cdf(-d2)
 
 # -----------------------------
-# Différences finies (fallback)
+# Différences finies (fallback pour le binomial)
 # -----------------------------
 def greek_fd(price_func, S,K,T,r,sigma, kind='delta'):
     # pas adaptatifs
@@ -94,7 +94,7 @@ def greek_fd(price_func, S,K,T,r,sigma, kind='delta'):
         return (price_func(S+hS,T,r,sigma) - 2*price_func(S,T,r,sigma) + price_func(S-hS,T,r,sigma))/ (hS**2)
     if kind=='vega':
         return (price_func(S,T,r,sigma+hV) - price_func(S,T,r,sigma-hV))/(2*hV)
-    if kind=='theta':  # convention: dV/dt -> on rapporte par an
+    if kind=='theta':  # dV/dt, convention theta < 0 pour le passage du temps
         t1 = max(1e-8, T+hT); t2 = max(1e-8, T-hT)
         return (price_func(S,t2,r,sigma) - price_func(S,t1,r,sigma))/(2*hT)
     if kind=='rho':
@@ -206,7 +206,7 @@ with col2:
             use_container_width=True
         )
 
-        # ---------------- Heatmap 10x10 (prix) ----------------
+        # ---------------- Heatmaps (Prix) ----------------
         st.markdown("---")
         st.subheader("🟩 Matrices de sensibilité (Prix)")
         S_values = np.linspace(S_min, S_max, 10)
@@ -233,28 +233,25 @@ with col2:
         st.plotly_chart(fig_call_heatmap, use_container_width=True)
         st.plotly_chart(fig_put_heatmap, use_container_width=True)
 
-        # ---------------- (REMPLACEMENT) Graphiques 3D avancés: Prix & Greeks ----------------
+        # ---------------- Surfaces 3D (automatiques, sans menus) ----------------
         st.markdown("---")
-        st.subheader("🧭 Surfaces 3D avancées (Prix & Greeks)")
+        st.subheader("🧭 Surfaces 3D — Prix & Greeks (Call en haut, Put en bas)")
 
-        # Choix métrique + résolution
-        metric = st.selectbox("Métrique à afficher", ["Prix", "Delta", "Vega", "Theta"])
-        density = st.slider("Résolution de la grille", 10, 60, 25, step=5)
+        # Paramètres de grille
+        DENSITY = 24  # augmente/diminue pour qualité/rapidité
+        sigma_range = np.linspace(sigma_min, sigma_max, DENSITY)
+        T_range = np.linspace(max(0.05, 0.05 if T <= 0.05 else 0.05), max(0.05, T), DENSITY)  # éviter T≈0
 
-        # Gammes évitant T≈0
-        sigma_range = np.linspace(sigma_min, sigma_max, density)
-        T_low = 0.02 if T <= 0.02 else 0.02
-        T_range = np.linspace(max(0.02, T_low), max(0.05, T), density)
-
-        # Différences finies pour le binomial (mêmes pas que plus haut)
-        def finite_diff(metric_name, S0,K0,t0,r0,sig0,opt,q0):
-            pf = lambda Ss,Ts,rr,vv: func(Ss,K0,max(1e-6,Ts),rr,max(1e-6,vv),opt,q0)
-            return greek_fd(pf, S0,K0,t0,r0,sig0, 
-                            {'Prix':None,'Delta':'delta','Vega':'vega','Theta':'theta'}[metric_name]
-                            ) if metric_name!="Prix" else pf(S0,t0,r0,sig0)
-
+        # Calcul surfaces (cache pour inputs identiques)
         @st.cache_data(show_spinner=False)
-        def compute_surface(model_name, metric_name, option_type, S0,K0,r0,q0, sigma_vals, T_vals):
+        def compute_surface(model_name, metric_name, option_type, S0,K0,r0,q0, sigma_vals, T_vals, n_steps):
+            # metric_name in {"Prix","Delta","Vega","Theta"}
+            def local_func(Ss,Ks,Ts,rr,vv,opt,qq):
+                if model_name == "Black-Scholes":
+                    return bs_european(Ss,Ks,Ts,rr,vv,opt,qq)
+                else:
+                    return binomial_european(Ss,Ks,Ts,rr,vv,n_steps,opt,qq)
+
             Z = np.zeros((len(T_vals), len(sigma_vals)), dtype=np.float32)
             for i, t_ in enumerate(T_vals):
                 for j, sig_ in enumerate(sigma_vals):
@@ -268,45 +265,52 @@ with col2:
                         elif metric_name == "Theta":
                             Z[i, j] = bs_theta(S0,K0,t_,r0,sig_,option_type,q0)
                     else:
+                        # binomial -> différences finies pour Greeks
+                        pf = lambda Ss,Ts,rr,vv: local_func(Ss,K0,max(1e-6,Ts),rr,max(1e-6,vv),option_type,q0)
                         if metric_name == "Prix":
-                            Z[i, j] = func(S0,K0,t_,r0,sig_,option_type,q0)
-                        else:
-                            Z[i, j] = finite_diff(metric_name, S0,K0,t_,r0,sig_,option_type,q0)
+                            Z[i, j] = pf(S0,t_,r0,sig_)
+                        elif metric_name == "Delta":
+                            Z[i, j] = greek_fd(pf,S0,K0,t_,r0,sig_,'delta')
+                        elif metric_name == "Vega":
+                            Z[i, j] = greek_fd(pf,S0,K0,t_,r0,sig_,'vega')
+                        elif metric_name == "Theta":
+                            Z[i, j] = greek_fd(pf,S0,K0,t_,r0,sig_,'theta')
             return Z
 
-        opt_type = st.radio("Type d’option", ["call","put"], horizontal=True)
+        metrics = ["Prix","Delta","Vega","Theta"]
+        option_types = ["call","put"]
 
-        with st.spinner("Calcul de la surface…"):
-            Z = compute_surface(model, metric, opt_type, S, K, r, q, sigma_range, T_range)
+        # Grille 2x4: Call (row=1), Put (row=2), colonnes = metrics
+        specs = [[{'type': 'surface'}]*4, [{'type':'surface'}]*4]
+        fig_grid = make_subplots(rows=2, cols=4, specs=specs,
+                                 subplot_titles=[f"{m} — Call" for m in metrics] + [f"{m} — Put" for m in metrics])
 
-        fig_adv = go.Figure(data=go.Surface(
-            z=Z, x=sigma_range, y=T_range,
-            contours={"z": {"show": True, "usecolormap": True, "project_z": True}},
-            colorbar={"title": metric}
-        ))
-        fig_adv.update_layout(
-            title=f"Surface 3D — {metric} ({opt_type.capitalize()}) — Modèle: {model}",
-            scene=dict(
-                xaxis_title="Volatilité σ",
-                yaxis_title="Temps restant T (années)",
-                zaxis_title=metric,
-                camera=dict(eye=dict(x=1.6, y=1.2, z=0.8))
-            ),
-            margin=dict(l=0, r=0, b=0, t=40)
+        for row, opt in enumerate(option_types, start=1):
+            for col, metric in enumerate(metrics, start=1):
+                Z = compute_surface(model, metric, opt, S, K, r, q, sigma_range, T_range, n if model=="Binomial" else 0)
+                fig_grid.add_trace(
+                    go.Surface(z=Z, x=sigma_range, y=T_range, showscale=False),
+                    row=row, col=col
+                )
+
+        # axes/titres/caméra
+        fig_grid.update_layout(
+            title="Surfaces 3D (σ en X, T en Y)",
+            margin=dict(l=0, r=0, b=0, t=50),
         )
-        hover_tpl = "<b>σ</b>=%{x:.3f}<br><b>T</b>=%{y:.3f}<br><b>"+metric+"</b>=%{z:.4f}"
-        fig_adv.update_traces(hovertemplate=hover_tpl)
+        # Configure chaque scène
+        # Plotly nomme scene, scene2, ...
+        for idx in range(1, 9):
+            scene_key = f"scene{'' if idx==1 else idx}"
+            fig_grid.update_layout(**{
+                scene_key: dict(
+                    xaxis_title="Volatilité σ",
+                    yaxis_title="Temps T (années)",
+                    zaxis_title=metrics[(idx-1)%4],
+                    camera=dict(eye=dict(x=1.4, y=1.2, z=0.9))
+                )
+            })
 
-        st.plotly_chart(fig_adv, use_container_width=True)
-with st.form("params_3d"):
-    metric = st.selectbox("Métrique à afficher", ["Prix", "Delta", "Vega", "Theta"])
-    density = st.slider("Résolution de la grille", 10, 60, 25, step=5)
-    opt_type = st.radio("Type d’option", ["call","put"], horizontal=True)
-    submitted_3d = st.form_submit_button("Mettre à jour le graphique")
+        st.plotly_chart(fig_grid, use_container_width=True)
 
-if submitted_3d:
-    # calcul de la surface uniquement si tu cliques
-    Z = compute_surface(...)
-    st.plotly_chart(...)
-
-
+# ---------------- Fin du script ----------------
