@@ -110,46 +110,20 @@ st.markdown(
     f"""
     <div style="position: fixed; top: 15px; left: 15px; z-index: 100; display:flex; gap:12px;">
 
-        <!-- Icône LinkedIn -->
-        <a href="{linkedin_url}" target="_blank" rel="noopener noreferrer" title="LinkedIn">
-            <svg width="28" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path fill="#0A66C2" d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037
-                 -1.853 0-2.136 1.447-2.136 2.943v5.663H9.352V9h3.414v1.561h.049
-                 c.476-.9 1.637-1.852 3.369-1.852 3.602 0 4.267 2.372
-                 4.267 5.459v6.284zM5.337 7.433a2.062 2.062 0 1 1 0-4.124
-                 2.062 2.062 0 0 1 0 4.124zM6.999 20.452H3.67V9h3.329v11.452z
-                 M22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24
-                 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774
-                 23.2 0 22.222 0h.003z"/>
-            </svg>
+        <!-- LinkedIn -->
+        <a href="{linkedin_url}" target="_blank" rel="noopener noreferrer">
+            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/linkedin.svg" width="28" height="28" style="filter: invert(23%) sepia(95%) saturate(1831%) hue-rotate(191deg) brightness(90%) contrast(96%);" />
         </a>
 
-        <!-- Icône GitHub -->
-        <a href="{github_url}" target="_blank" rel="noopener noreferrer" title="GitHub">
-            <svg width="28" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path fill="#181717" d="M12 .297a12 12 0 0 0-3.792 23.398c.6.111.82-.261.82-.58
-                 0-.287-.011-1.243-.017-2.252-3.338.726-4.042-1.608-4.042-1.608
-                 -.546-1.387-1.333-1.757-1.333-1.757-1.089-.745.083-.73.083-.73
-                 1.205.085 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304
-                 3.492.997.108-.787.419-1.305.763-1.605
-                 -2.665-.304-5.466-1.333-5.466-5.93
-                 0-1.31.469-2.381 1.237-3.22
-                 -.124-.303-.536-1.523.117-3.176
-                 0 0 1.008-.322 3.3 1.23A11.49 11.49 0 0 1 12 6.844a11.49 11.49 0 0 1 3.004.404
-                 c2.29-1.552 3.297-1.23 3.297-1.23
-                 .655 1.653.244 2.873.12 3.176
-                 .77.839 1.236 1.91 1.236 3.22
-                 0 4.61-2.806 5.624-5.479 5.921
-                 .43.371.814 1.103.814 2.222
-                 0 1.604-.015 2.896-.015 3.289
-                 0 .322.218.697.826.579A12.001 12.001 0 0 0 12 .297"/>
-            </svg>
+        <!-- GitHub -->
+        <a href="{github_url}" target="_blank" rel="noopener noreferrer">
+            <img src="https://cdn.jsdelivr.net/npm/simple-icons@v11/icons/github.svg" width="28" height="28" />
         </a>
+
     </div>
     """,
     unsafe_allow_html=True
 )
-
 st.title("👨‍💼 Priceur d'Options vanille Européennes")
 
 # Layout en colonnes (1/4 - 3/4)
