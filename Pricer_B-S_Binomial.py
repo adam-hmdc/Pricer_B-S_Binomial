@@ -154,6 +154,115 @@ with col2:
         )
 
         st.plotly_chart(fig_surfaces, use_container_width=True)
+        # ---------------- Graphiques 3D améliorés ----------------
+st.markdown("---")
+st.subheader("🧭 Surfaces 3D avancées (Prix & Greeks)")
+
+# Choix métrique + résolution
+metric = st.selectbox("Métrique à afficher", ["Prix", "Delta", "Vega", "Theta"])
+density = st.slider("Résolution de la grille", 10, 60, 25, step=5)
+
+# Recalcule des gammes selon la résolution choisie
+sigma_range = np.linspace(sigma_min, sigma_max, density)
+T_range = np.linspace(max(0.02, 0.02 if T <= 0 else 0.02), max(0.05, T), density)  # éviter T≈0
+
+# Helpers Black-Scholes (fermés)
+def _d1_d2(S,K,T,r,sigma,q):
+    sqrtT = np.sqrt(T)
+    d1 = (np.log(S/K) + (r - q + 0.5*sigma**2)*T) / (sigma*sqrtT)
+    d2 = d1 - sigma*sqrtT
+    return d1, d2
+
+def bs_delta(S,K,T,r,sigma,option_type='call',q=0):
+    d1, _ = _d1_d2(S,K,T,r,sigma,q)
+    if option_type == 'call':
+        return np.exp(-q*T) * norm.cdf(d1)
+    else:
+        return np.exp(-q*T) * (norm.cdf(d1) - 1)
+
+def bs_vega(S,K,T,r,sigma,q=0):
+    d1, _ = _d1_d2(S,K,T,r,sigma,q)
+    return S * np.exp(-q*T) * norm.pdf(d1) * np.sqrt(T)  # par point de sigma (1.00 = 100%)
+
+def bs_theta(S,K,T,r,sigma,option_type='call',q=0):
+    d1, d2 = _d1_d2(S,K,T,r,sigma,q)
+    term1 = - (S*np.exp(-q*T)*norm.pdf(d1)*sigma) / (2*np.sqrt(T))
+    if option_type == 'call':
+        term2 = - r*K*np.exp(-r*T)*norm.cdf(d2)
+        term3 = + q*S*np.exp(-q*T)*norm.cdf(d1)
+        return term1 + term2 + term3  # par an
+    else:
+        term2 = + r*K*np.exp(-r*T)*norm.cdf(-d2)
+        term3 = - q*S*np.exp(-q*T)*norm.cdf(-d1)
+        return term1 + term2 + term3
+
+# Différences finies génériques (pour le modèle binomial)
+def finite_diff(metric_name, S,K,t,r,sig,opt,q, hS=None, hT=None, hV=None):
+    # pas adaptatifs
+    hS = hS or max(1e-4*S, 1e-3)
+    hT = hT or min(0.01, max(1e-3, 0.1*t))
+    hV = hV or 1e-3
+
+    price = lambda SS, TT, VV: func(SS, K, max(1e-6, TT), r, max(1e-6, VV), opt, q)
+
+    if metric_name == "Prix":
+        return price(S, t, sig)
+    if metric_name == "Delta":
+        return (price(S+hS, t, sig) - price(S-hS, t, sig)) / (2*hS)
+    if metric_name == "Vega":
+        return (price(S, t, sig+hV) - price(S, t, sig-hV)) / (2*hV)
+    if metric_name == "Theta":
+        t1 = max(1e-6, t+hT)
+        t2 = max(1e-6, t-hT)
+        return (price(S, t2, sig) - price(S, t1, sig)) / (2*hT)  # convention theta<0
+    return np.nan
+
+# Wrapper pour remplir une surface selon le modèle + métrique
+@st.cache_data(show_spinner=False)
+def compute_surface(model_name, metric_name, option_type, S, K, r, q, sigma_vals, T_vals):
+    Z = np.zeros((len(T_vals), len(sigma_vals)), dtype=np.float32)
+    for i, t in enumerate(T_vals):
+        for j, sig in enumerate(sigma_vals):
+            if model_name == "Black-Scholes":
+                if metric_name == "Prix":
+                    Z[i, j] = bs_european(S,K,t,r,sig,option_type,q)
+                elif metric_name == "Delta":
+                    Z[i, j] = bs_delta(S,K,t,r,sig,option_type,q)
+                elif metric_name == "Vega":
+                    Z[i, j] = bs_vega(S,K,t,r,sig,q)
+                elif metric_name == "Theta":
+                    Z[i, j] = bs_theta(S,K,t,r,sig,option_type,q)
+            else:
+                Z[i, j] = finite_diff(metric_name, S,K,t,r,sig,option_type,q)
+    return Z
+
+opt_type = st.radio("Type d’option", ["call","put"], horizontal=True)
+
+with st.spinner("Calcul de la surface…"):
+    Z = compute_surface(model, metric, opt_type, S, K, r, q, sigma_range, T_range)
+
+fig_adv = go.Figure(data=go.Surface(
+    z=Z, x=sigma_range, y=T_range,
+    contours = {
+        "z": {"show": True, "usecolormap": True, "project_z": True}
+    },
+    colorbar={"title": metric}
+))
+fig_adv.update_layout(
+    title=f"Surface 3D — {metric} ({opt_type.capitalize()}) — Modèle: {model}",
+    scene=dict(
+        xaxis_title="Volatilité σ",
+        yaxis_title="Temps restant T (années)",
+        zaxis_title=metric,
+        camera=dict(eye=dict(x=1.6, y=1.2, z=0.8))
+    ),
+    margin=dict(l=0, r=0, b=0, t=40)
+)
+hover_tpl = "<b>σ</b>=%{x:.3f}<br><b>T</b>=%{y:.3f}<br><b>"+metric+"</b>=%{z:.4f}"
+fig_adv.update_traces(hovertemplate=hover_tpl)
+
+st.plotly_chart(fig_adv, use_container_width=True)
+
 
 
         # ---------------- Graphiques 3D améliorés ----------------
