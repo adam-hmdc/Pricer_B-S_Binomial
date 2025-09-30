@@ -298,5 +298,15 @@ with col2:
         fig_adv.update_traces(hovertemplate=hover_tpl)
 
         st.plotly_chart(fig_adv, use_container_width=True)
+with st.form("params_3d"):
+    metric = st.selectbox("Métrique à afficher", ["Prix", "Delta", "Vega", "Theta"])
+    density = st.slider("Résolution de la grille", 10, 60, 25, step=5)
+    opt_type = st.radio("Type d’option", ["call","put"], horizontal=True)
+    submitted_3d = st.form_submit_button("Mettre à jour le graphique")
+
+if submitted_3d:
+    # calcul de la surface uniquement si tu cliques
+    Z = compute_surface(...)
+    st.plotly_chart(...)
 
 
