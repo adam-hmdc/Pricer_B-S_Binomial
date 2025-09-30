@@ -286,7 +286,7 @@ with col2:
                                  subplot_titles=[f"{m} — Call" for m in metrics] + [f"{m} — Put" for m in metrics])
 
      for row, opt in enumerate(option_types, start=1):
-    for col, metric in enumerate(metrics, start=1):
+     for col, metric in enumerate(metrics, start=1):
         Z = compute_surface(model, metric, opt, S, K, r, q, sigma_range, T_range, n if model=="Binomial" else 0)
         colorscale = "Viridis" if opt == "call" else "Plasma"
         fig_grid.add_trace(
