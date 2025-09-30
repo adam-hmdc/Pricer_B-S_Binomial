@@ -285,13 +285,14 @@ with col2:
         fig_grid = make_subplots(rows=2, cols=4, specs=specs,
                                  subplot_titles=[f"{m} — Call" for m in metrics] + [f"{m} — Put" for m in metrics])
 
-        for row, opt in enumerate(option_types, start=1):
-            for col, metric in enumerate(metrics, start=1):
-                Z = compute_surface(model, metric, opt, S, K, r, q, sigma_range, T_range, n if model=="Binomial" else 0)
-                fig_grid.add_trace(
-                    go.Surface(z=Z, x=sigma_range, y=T_range, showscale=False),
-                    row=row, col=col
-                )
+     for row, opt in enumerate(option_types, start=1):
+    for col, metric in enumerate(metrics, start=1):
+        Z = compute_surface(model, metric, opt, S, K, r, q, sigma_range, T_range, n if model=="Binomial" else 0)
+        colorscale = "Viridis" if opt == "call" else "Plasma"
+        fig_grid.add_trace(
+            go.Surface(z=Z, x=sigma_range, y=T_range, colorscale=colorscale, showscale=False),
+            row=row, col=col
+        )
 
         # axes/titres/caméra
         fig_grid.update_layout(
