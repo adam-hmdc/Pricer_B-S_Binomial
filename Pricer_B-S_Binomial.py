@@ -108,17 +108,18 @@ linkedin_url = "https://www.linkedin.com/in/adam-hamadache-802172294/"
 github_url = "https://github.com/adam-hmdc"
 st.markdown(
     f"""
-    <div style="position: fixed; top: 10px; left: 10px; z-index: 100;">
-        <a href="{linkedin_url}" target="_blank">
-            <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="30">
+    <div style="position: fixed; top: 10px; left: 10px; z-index: 100; display:flex; gap:10px; align-items:center;">
+        <a href="{linkedin_url}" target="_blank" rel="noopener noreferrer" title="LinkedIn">
+            <img src="https://cdn.jsdelivr.net/npm/simple-icons@11/icons/linkedin.svg" width="26" height="26" style="filter: invert(23%) sepia(95%) saturate(1831%) hue-rotate(191deg) brightness(90%) contrast(96%);" />
         </a>
-        <a href="{github_url}" target="_blank" style="margin-left: 10px;">
-            <img src="https://cdn-icons-png.flaticon.com/512/25/25231.png" width="30">
+        <a href="{github_url}" target="_blank" rel="noopener noreferrer" title="GitHub">
+            <img src="https://cdn.jsdelivr.net/npm/simple-icons@11/icons/github.svg" width="26" height="26" />
         </a>
     </div>
     """,
     unsafe_allow_html=True
 )
+
 
 st.title("👨‍💼 Priceur d'Options vanille Européennes")
 
